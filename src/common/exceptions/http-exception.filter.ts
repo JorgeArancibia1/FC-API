@@ -12,10 +12,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse();
 
+    // ThrottlerException (y otros HttpException) pueden traer la respuesta
+    // como string plano; antes caía al fallback 'Error' y el usuario veía
+    // "Error" en vez del mensaje amigable.
     const errorMessage =
       typeof exceptionResponse === 'object' && exceptionResponse !== null
-        ? (exceptionResponse as Record<string, unknown>)['message'] || 'Error'
-        : 'Error';
+        ? ((exceptionResponse as Record<string, unknown>)['message'] as string | string[] | undefined) ??
+          'Error'
+        : String(exceptionResponse);
 
     this.logger.warn(
       `${request.method} ${request.url} - ${status} - ${JSON.stringify(errorMessage)}`,
