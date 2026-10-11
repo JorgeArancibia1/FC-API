@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
@@ -14,37 +14,41 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
-  @ApiOperation({ summary: 'Listar todos los usuarios (Admin/Supervisor)' })
-  findAll() {
-    return this.usersService.findAll();
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({
+    summary: 'Listar usuarios (Admin/Developer)',
+    description:
+      'Por defecto devuelve todos. Con ?scope=invited un admin recibe solo los usuarios que aceptaron una invitación suya (el developer sigue viendo todos).',
+  })
+  findAll(@User() user: CurrentUser, @Query('scope') scope?: string) {
+    return this.usersService.findAll(user, scope);
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Crear usuario con roles arbitrarios (Admin)' })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Crear usuario (Admin/Developer)' })
+  create(@Body() dto: CreateUserDto, @User() user: CurrentUser) {
+    return this.usersService.create(dto, user);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
   @ApiOperation({ summary: 'Detalle de un usuario' })
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Actualizar roles, estado o datos básicos (Admin)' })
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Actualizar roles, estado o datos básicos (Admin/Developer)' })
   update(@Param('id') id: string, @Body() dto: UpdateUserDto, @User() user: CurrentUser) {
-    return this.usersService.update(id, dto, user.id);
+    return this.usersService.update(id, dto, user);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Soft-delete: marca al usuario como eliminado (Admin)' })
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Soft-delete: marca al usuario como eliminado (Admin/Developer)' })
   remove(@Param('id') id: string, @User() user: CurrentUser) {
-    return this.usersService.softDelete(id, user.id);
+    return this.usersService.softDelete(id, user);
   }
 }

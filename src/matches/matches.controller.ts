@@ -14,8 +14,8 @@ export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Crear partido (solo Admin)' })
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Crear partido (Admin/Developer)' })
   create(@Body() dto: CreateMatchDto, @User() user: CurrentUser) {
     return this.matchesService.create(dto, user.id);
   }
@@ -26,6 +26,12 @@ export class MatchesController {
     return this.matchesService.findAll();
   }
 
+  @Get('mine')
+  @ApiOperation({ summary: 'Partidos en los que estoy inscrito' })
+  findMine(@User() user: CurrentUser) {
+    return this.matchesService.findMine(user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Detalle de un partido con su plantilla' })
   findOne(@Param('id') id: string) {
@@ -33,15 +39,15 @@ export class MatchesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
-  @ApiOperation({ summary: 'Actualizar partido (Admin o Supervisor)' })
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Actualizar / cancelar / finalizar partido (Admin/Developer)' })
   update(@Param('id') id: string, @Body() dto: UpdateMatchDto) {
     return this.matchesService.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Eliminar partido (solo Admin)' })
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Eliminar partido (Admin/Developer)' })
   remove(@Param('id') id: string) {
     return this.matchesService.remove(id);
   }

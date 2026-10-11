@@ -12,9 +12,9 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
-  admin
-  supervisor
-  usuario
+  developer // Único email autorizado (cristobal@gmail.com). Acceso total + panel avanzado.
+  admin     // Gestiona partidos, usuarios e invitaciones.
+  usuario   // Juega: se inscribe, invita a sus partidos, cambia su rol desde el perfil.
 }
 
 enum MatchStatus {
@@ -40,12 +40,22 @@ model User {
   password        String
   roles           UserRole[] @default([usuario])
   status          String     @default("activo")
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
 
-  refreshTokens RefreshToken[]
-  registrations MatchRegistration[]
-  matchesCreated Match[]      @relation("MatchCreatedBy")
+  // Recuperación / identidad
+  phone               String?   // Teléfono para el flujo "olvidé mi correo"
+  securityQuestion    String?   // Pregunta de seguridad (texto)
+  securityAnswerHash  String?   // SHA-256 del answer normalizado (nunca en claro)
+  resetTokenHash      String?   // SHA-256 del token de recuperación de contraseña
+  resetTokenExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens  RefreshToken[]
+  registrations  MatchRegistration[]
+  matchesCreated Match[]             @relation("MatchCreatedBy")
+  invitesCreated MatchInvite[]       @relation("InviteCreatedBy")
+  platformInvitesCreated PlatformInvite[] @relation("PlatformInviteCreatedBy")
 }
 
 // OAuth 2.0 refresh token rotation con jti único + reuse detection.
@@ -81,6 +91,7 @@ model Match {
   createdBy   User   @relation("MatchCreatedBy", fields: [createdById], references: [id], onDelete: NoAction)
 
   registrations MatchRegistration[]
+  invites       MatchInvite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,6 +99,54 @@ model Match {
   @@index([dateTime])
   @@index([status])
   @@index([createdById])
+}
+
+// Invitación compartible a un partido: link (token) + código de 6 dígitos.
+// Válida 48 h y reutilizable hasta que expira o se revoca.
+model MatchInvite {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  matchId     String   @db.ObjectId
+  createdById String   @db.ObjectId
+  code        String // 6 dígitos
+  token       String   @unique // identificador del link compartible
+  expiresAt   DateTime
+  uses        Int      @default(0)
+  revoked     Boolean  @default(false)
+  // Usuarios que aceptaron esta invitación (link o código). Permite atribuir
+  // al invitador los usuarios que trajo, para la pestaña "Usuarios" del panel.
+  acceptedByIds String[] @default([]) @db.ObjectId
+  createdAt   DateTime @default(now())
+
+  match     Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  createdBy User  @relation("InviteCreatedBy", fields: [createdById], references: [id], onDelete: NoAction)
+
+  @@index([matchId])
+  @@index([code])
+  @@index([createdById])
+  @@map("match_invites")
+}
+
+// Invitación general a la plataforma (no ligada a un partido): link (token) +
+// código de 6 dígitos. Permite que un nuevo usuario se registre y quede
+// atribuido al invitador para la pestaña "Usuarios". Válida 48 h y reutilizable.
+model PlatformInvite {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdById String   @db.ObjectId
+  code        String // 6 dígitos
+  token       String   @unique // identificador del link compartible
+  expiresAt   DateTime
+  uses        Int      @default(0)
+  revoked     Boolean  @default(false)
+  // Usuarios que se registraron con esta invitación (link o código). Permite
+  // atribuir al invitador los usuarios que trajo, para la pestaña "Usuarios".
+  acceptedByIds String[] @default([]) @db.ObjectId
+  createdAt   DateTime @default(now())
+
+  createdBy User @relation("PlatformInviteCreatedBy", fields: [createdById], references: [id], onDelete: NoAction)
+
+  @@index([code])
+  @@index([createdById])
+  @@map("platform_invites")
 }
 
 model MatchRegistration {

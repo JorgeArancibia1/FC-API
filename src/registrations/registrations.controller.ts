@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RegistrationsService } from './registrations.service';
 import { ReorderRegistrationsDto } from './dto/reorder-registrations.dto';
+import { AddPlayerDto } from './dto/add-player.dto';
 import { AuthGuard, RolesGuard } from '../common/guards';
 import { Roles, User } from '../common/decorators';
 import { CurrentUser, UserRole } from '../common';
@@ -31,18 +32,36 @@ export class RegistrationsController {
   }
 
   @Delete('register')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Retirarse del partido' })
+  @ApiOperation({ summary: 'Desinscribirse del partido' })
   unregister(@Param('matchId') matchId: string, @User() user: CurrentUser) {
     return this.registrationsService.unregister(matchId, user.id);
   }
 
+  // --- Gestión de jugadores (Admin/Developer) -------------------------------
+
+  @Post('players')
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Inscribir a un jugador (Admin/Developer)' })
+  adminAddPlayer(@Param('matchId') matchId: string, @Body() dto: AddPlayerDto) {
+    return this.registrationsService.adminAddPlayer(matchId, dto.userId);
+  }
+
+  @Delete('players/:userId')
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Quitar a un jugador del partido (Admin/Developer)' })
+  adminRemovePlayer(
+    @Param('matchId') matchId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.registrationsService.adminRemovePlayer(matchId, userId);
+  }
+
+  // --- Orden de la plantilla ------------------------------------------------
+
   @Patch('registrations/reorder')
-  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
-  @ApiOperation({
-    summary:
-      'Reordenar la plantilla (admin/supervisor). Acepta asignaciones parciales {registrationId, position}.',
-  })
+  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
+  @ApiOperation({ summary: 'Reordenar la plantilla (Admin/Developer)' })
   reorder(
     @Param('matchId') matchId: string,
     @Body() dto: ReorderRegistrationsDto,

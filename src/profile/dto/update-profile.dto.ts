@@ -44,4 +44,22 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(500)
   heroPhotoUrl?: string;
+
+  @ApiProperty({ required: false, example: '+56912345678' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phone?: string;
+
+  @ApiProperty({ required: false, example: '¿Cuál es tu equipo favorito?' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(140)
+  securityQuestion?: string;
+
+  @ApiProperty({ required: false, example: 'Colo-Colo' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(140)
+  securityAnswer?: string;
 }

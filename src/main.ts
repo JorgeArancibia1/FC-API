@@ -68,9 +68,9 @@ async function bootstrap() {
           'Suscríbete a un partido: `socket.emit("match:join", matchId)`. ' +
           'Escucha eventos: `player.registered` y `player.unregistered`.\n\n' +
           '### Roles\n' +
-          '- `admin`: CRUD de partidos + acceso total\n' +
-          '- `supervisor`: edita partidos\n' +
-          '- `usuario`: ve partidos y se inscribe/retira',
+          '- `developer`: acceso total + panel avanzado (cuenta única)\n' +
+          '- `admin`: gestiona partidos, usuarios e invitaciones\n' +
+          '- `usuario`: juega, se inscribe e invita a sus partidos',
       )
       .setVersion('0.1.0')
       .addBearerAuth({

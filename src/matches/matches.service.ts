@@ -1,21 +1,39 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MatchGateway } from '../realtime/match.gateway';
 import { CreateMatchDto, UpdateMatchDto } from './dto';
 
 @Injectable()
 export class MatchesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly matchGateway: MatchGateway,
+  ) {}
 
-  create(dto: CreateMatchDto, createdById: string) {
-    return this.prisma.match.create({
+  async create(dto: CreateMatchDto, createdById: string) {
+    const match = await this.prisma.match.create({
       data: { ...dto, createdById },
     });
+    // Avisa a todos para que el partido nuevo aparezca sin recargar.
+    this.matchGateway.emitMatchesChanged({ matchId: match.id });
+    return match;
   }
 
   findAll() {
     return this.prisma.match.findMany({
       orderBy: { dateTime: 'asc' },
       include: {
+        _count: { select: { registrations: true } },
+      },
+    });
+  }
+
+  findMine(userId: string) {
+    return this.prisma.match.findMany({
+      where: { registrations: { some: { userId } } },
+      orderBy: { dateTime: 'asc' },
+      include: {
+        createdBy: { select: { id: true, name: true } },
         _count: { select: { registrations: true } },
       },
     });
@@ -44,32 +62,27 @@ export class MatchesService {
       },
     });
 
-    if (!match) {
-      throw new NotFoundException(`Partido ${id} no encontrado`);
-    }
+    if (!match) throw new NotFoundException(`Partido ${id} no encontrado`);
 
-    // Orden: position asc primero (los reordenados manualmente),
-    // luego los sin position por registeredAt asc.
-    // Esto centraliza la lógica de ordenamiento — Mongo+Prisma no permite
-    // nulls-last directamente, así que lo hacemos en memoria.
-    match.registrations.sort((a, b) => {
-      if (a.position != null && b.position != null) return a.position - b.position;
-      if (a.position != null) return -1;
-      if (b.position != null) return 1;
-      return new Date(a.registeredAt).getTime() - new Date(b.registeredAt).getTime();
-    });
-
+    // La plantilla se arma por `position` (reorden manual) y, para quien no
+    // tiene posición, por orden de inscripción. Sin restricción de secuencia.
     return match;
   }
 
   async update(id: string, dto: UpdateMatchDto) {
     await this.assertExists(id);
-    return this.prisma.match.update({ where: { id }, data: dto });
+    const match = await this.prisma.match.update({
+      where: { id },
+      data: dto,
+    });
+    this.matchGateway.emitMatchesChanged({ matchId: id });
+    return match;
   }
 
   async remove(id: string) {
     await this.assertExists(id);
     await this.prisma.match.delete({ where: { id } });
+    this.matchGateway.emitMatchesChanged({ matchId: id });
     return { message: 'Partido eliminado' };
   }
 

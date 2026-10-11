@@ -13,6 +13,9 @@ import { JwtService } from '@nestjs/jwt';
 import { envs } from '../config/envs';
 import { CurrentUser } from '../common';
 
+// Sala global a la que se unen todos los clientes autenticados.
+const MATCHES_ROOM = 'matches';
+
 // Patrón: WebSocket Gateway autenticado.
 // El cliente envía el JWT en handshake.auth.token al conectar:
 //   io(url, { auth: { token: 'Bearer <jwt>' } })
@@ -73,6 +76,15 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { ok: true, room: this.room(matchId) };
   }
 
+  // Sala global: todos los clientes autenticados se unen aquí para recibir
+  // altas/bajas/reordenes y la creación/edición de cualquier partido, aunque no
+  // estén viendo ese partido en concreto.
+  @SubscribeMessage('matches:join')
+  onJoinMatches(@ConnectedSocket() client: Socket) {
+    client.join(MATCHES_ROOM);
+    return { ok: true, room: MATCHES_ROOM };
+  }
+
   @SubscribeMessage('match:leave')
   onLeave(@ConnectedSocket() client: Socket, @MessageBody() matchId: string) {
     if (!matchId || typeof matchId !== 'string') return { ok: false };
@@ -96,6 +108,12 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // El cliente reacciona refetcheando el match (más simple y robusto que
     // mandar el nuevo orden — evita conflictos si llegan eventos cruzados).
     this.server.to(this.room(matchId)).emit('players.reordered', { matchId });
+  }
+
+  // Notifica a todos los clientes que la lista o el detalle de un partido cambió
+  // (creado, editado, borrado, o cambió la plantilla). El cliente refetchea.
+  emitMatchesChanged(payload: { matchId?: string } = {}) {
+    this.server.to(MATCHES_ROOM).emit('matches.changed', payload);
   }
 
   private room(matchId: string) {

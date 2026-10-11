@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangePasswordDto, UpdateProfileDto } from './dto';
@@ -12,6 +13,8 @@ const PROFILE_SELECT = {
   photoUrl: true,
   heroPhotoUrl: true,
   email: true,
+  phone: true,
+  securityQuestion: true,
   roles: true,
   status: true,
   createdAt: true,
@@ -19,6 +22,10 @@ const PROFILE_SELECT = {
 };
 
 const BCRYPT_COST = 12;
+
+function hashAnswer(answer: string): string {
+  return createHash('sha256').update(answer.trim().toLowerCase()).digest('hex');
+}
 
 @Injectable()
 export class ProfileService {
@@ -33,10 +40,16 @@ export class ProfileService {
     return user;
   }
 
-  updateMe(userId: string, dto: UpdateProfileDto) {
+  async updateMe(userId: string, dto: UpdateProfileDto) {
+    const { securityAnswer, ...rest } = dto;
+    const data: Record<string, unknown> = { ...rest };
+    if (securityAnswer !== undefined) {
+      const trimmed = securityAnswer.trim();
+      data.securityAnswerHash = trimmed ? hashAnswer(trimmed) : null;
+    }
     return this.prisma.user.update({
       where: { id: userId },
-      data: dto,
+      data,
       select: PROFILE_SELECT,
     });
   }
