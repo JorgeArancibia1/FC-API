@@ -59,9 +59,10 @@ export class RegistrationsController {
 
   // --- Orden de la plantilla ------------------------------------------------
 
+  // Sin @Roles: cualquier usuario autenticado puede reordenar (dev, admin y
+  // jugador). El AuthGuard del controlador sigue exigiendo sesión válida.
   @Patch('registrations/reorder')
-  @Roles(UserRole.ADMIN, UserRole.DEVELOPER)
-  @ApiOperation({ summary: 'Reordenar la plantilla (Admin/Developer)' })
+  @ApiOperation({ summary: 'Reordenar la plantilla (autenticado)' })
   reorder(
     @Param('matchId') matchId: string,
     @Body() dto: ReorderRegistrationsDto,
