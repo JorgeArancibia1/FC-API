@@ -16,7 +16,7 @@ export class MailService {
   private readonly from: string;
 
   constructor() {
-    this.from = envs.mailFrom || envs.smtpUser || 'no-reply@arboldevida.fc';
+    this.from = envs.mailFrom || envs.smtpUser || 'no-reply@golfc.club';
     this.transporter = envs.smtpHost
       ? createTransport({
           host: envs.smtpHost,
@@ -38,11 +38,11 @@ export class MailService {
   }
 
   async sendPasswordReset(to: string, name: string, resetUrl: string): Promise<SendResult> {
-    const subject = 'Recupera tu contraseña — Árbol de Vida FC';
+    const subject = 'Recupera tu contraseña — Gol FC';
     const text = [
       `Hola ${name},`,
       '',
-      'Recibimos una solicitud para restablecer tu contraseña de Árbol de Vida FC.',
+      'Recibimos una solicitud para restablecer tu contraseña de Gol FC.',
       `Abre este enlace (válido por 1 hora): ${resetUrl}`,
       '',
       'Si no fuiste tú, ignora este mensaje. Tu contraseña no cambiará.',
@@ -50,7 +50,7 @@ export class MailService {
 
     const html = `
       <div style="font-family:Inter,Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;color:#14251e">
-        <h2 style="color:#0b5c3b">Árbol de Vida FC</h2>
+        <h2 style="color:#1a7a3a">Gol FC</h2>
         <p>Hola <strong>${escapeHtml(name)}</strong>,</p>
         <p>Recibimos una solicitud para restablecer tu contraseña.</p>
         <p>

@@ -56,7 +56,7 @@ async function bootstrap() {
     );
 
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Simón FC API')
+      .setTitle('Gol FC API')
       .setDescription(
         '## API para inscripción a partidos de fútbol\n\n' +
           '### Autenticación\n' +
@@ -90,7 +90,7 @@ async function bootstrap() {
 
     await app.listen(envs.port);
 
-    logger.log(`✅ Simón FC API en http://localhost:${envs.port}/api`);
+    logger.log(`✅ Gol FC API en http://localhost:${envs.port}/api`);
     logger.log(`📚 Swagger en http://localhost:${envs.port}/api/docs`);
     logger.log(`📡 WebSocket en ws://localhost:${envs.port}/realtime`);
   } catch (error) {
